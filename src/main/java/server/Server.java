@@ -38,11 +38,12 @@ public class Server {
 
                 String inputLine;
                 while ((inputLine = in.readLine()) != null) {
-                    if (".".equals(inputLine)) {
+                    switchCommand(inputLine, out);
+                	if (".".equals(inputLine)) {
                         out.println("bye");
                         break;
                     }
-                    out.println("Ã© muito biba");
+                    out.println("João é muito biba");
                 }
 
                 in.close();
@@ -52,5 +53,20 @@ public class Server {
                 System.out.println("Deu treta");
             }
         }
+    }
+    
+    public static void switchCommand(final String line, final PrintWriter out) {
+    	if (null == line || line.isEmpty())
+    		return;
+    	
+    	if (line.split("-")[0].equals("1")) {
+    		//recebe um lance
+    	} else if (line.split("-")[0].equals("2")) {
+    		//retorna maior lance atual
+    	} else if (line.split("-")[0].equals("3")) {
+    		//sai do programa
+    	} else {
+    		out.println("comando inválido");
+    	}
     }
 }
