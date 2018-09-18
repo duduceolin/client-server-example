@@ -28,7 +28,7 @@ public class Client {
         }
         return resp;
     }
-
+    
     public void stopConnection() throws IOException {
         in.close();
         out.close();

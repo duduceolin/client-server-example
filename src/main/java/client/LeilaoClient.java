@@ -23,12 +23,13 @@ public class LeilaoClient {
 
 			switch (op) {
 			case 1:
-				valor = ler.nextDouble();
-				/*if (valorNoservidor > valor){
+				/**valor = ler.nextDouble();
+				if (valorNoservidor > valor){
+				 * client.sendMessage("2-")
 				System.out.println("Já existe uma forta maior. Dê um lance maior que:" + valorNoServidor);
 				}
 				else {
-				valorNoServidor = valor;
+					client.sendMessage(valor);
 				System.out.println("Lance efetuado com sucesso!");
 				}*/
 				break;
