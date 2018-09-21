@@ -6,35 +6,78 @@ import java.io.InputStreamReader;
 import java.io.PrintWriter;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.util.ArrayList;
+import java.util.List;
+
+
+class Lance {
+    private String nome;
+    private Double valor;
+
+    public Lance(String nome, Double valor) {
+        this.nome = nome;
+        this.valor = valor;
+    }
+
+    public String getNome() {
+        return nome;
+    }
+
+    public void setNome(String nome) {
+        this.nome = nome;
+    }
+
+    public Double getValor() {
+        return valor;
+    }
+
+    public void setValor(Double valor) {
+        this.valor = valor;
+    }
+
+    @Override
+    public String toString() {
+        final StringBuilder sb = new StringBuilder("Lance{");
+        sb.append("nome='").append(nome).append('\'');
+        sb.append(", valor=").append(valor);
+        sb.append('}');
+        return sb.toString();
+    }
+}
+
 
 public class Server {
-	private ServerSocket serverSocket;
-	public static Double valor = 1000.0;
 
-	public void start(int port) throws IOException {
-		serverSocket = new ServerSocket(port);
-		while (true)
-			new EchoClientHandler(serverSocket.accept()).start();
-	}
+    private static ServerSocket serverSocket;
 
-	public void stop() throws IOException {
-		serverSocket.close();
-	}
+    private static Boolean isActive;
+    private static Lance last;
+    private static List<String> connectedUsers;
+    private static List<String> connectedAdmins;
 
-	private static class EchoClientHandler extends Thread {
-		private Socket clientSocket;
-		private PrintWriter out;
-		private BufferedReader in;
+    public void start(int port) throws IOException {
+        serverSocket = new ServerSocket(port);
+        connectedUsers = new ArrayList<String>();
+        connectedAdmins = new ArrayList<String>();
+        isActive = true;
 
-		public EchoClientHandler(Socket socket) {
-			this.clientSocket = socket;
-		}
+        while (true)
+            new EchoClientHandler(serverSocket.accept()).start();
+    }
 
-		public static void alterarLance(final Double lance) {
-			if (lance > valor)
-				valor = lance;
-		}
-		
+    public void stop() throws IOException {
+        serverSocket.close();
+    }
+
+    private static class EchoClientHandler extends Thread {
+        private Socket clientSocket;
+        private PrintWriter out;
+        private BufferedReader in;
+
+        public EchoClientHandler(Socket socket) {
+            this.clientSocket = socket;
+        }
+
         public void run() {
 
             try {
@@ -44,12 +87,7 @@ public class Server {
 
                 String inputLine;
                 while ((inputLine = in.readLine()) != null) {
-                    switchCommand(inputLine, out);
-                	/**if (".".equals(inputLine)) {
-                        out.println("bye");
-                        break;
-                    }
-                    out.println("João é muito biba");*/
+                   switchCommand(inputLine, out);
                 }
 
                 in.close();
@@ -59,21 +97,68 @@ public class Server {
                 System.out.println("Deu treta" + e);
             }
         }
-	}
+    }
 
-	public static void switchCommand(final String line, final PrintWriter out) {
-		if (null == line || line.isEmpty())
-			return;
+    private static void switchCommand(final String command, final PrintWriter out) throws IOException {
 
-		if (line.split("-")[0].equals("1")) {
-			// recebe um lance
-		} else if (line.split("-")[0].equals("2")) {
-			// retorna maior lance atual
-			out.println(valor);
-		} else if (line.split("-")[0].equals("3")) {
-			// sai do programa
-		} else {
-			out.println("comando inválido");
-		}
-	}
+        if (!isActive){
+            responseToUser(command, "O leilão não está ativo.");
+            return;
+        }
+
+        if (command.contains("[NORMAL]")) {
+            connectedUsers.add(command.split("]")[1]);
+            out.println(responseToUser(command, "Você entrou no leilão no modo PARTICIPANTE"));
+        } else if (command.contains("[LEILOEIRO]")) {
+            connectedAdmins.add(command.split("]")[1]);
+            out.println(responseToUser(command, "Você entrou no leilão no modo LEILOEIRO"));
+        } else if (command.contains("VERLANCE")) {
+            out.println(getWinner());
+        } else if (command.contains("ACABAR")) {
+            final String name = getUsername(command);
+            if (connectedAdmins.contains(name)) {
+                out.println(responseToAll("Leilão cancelado pelo "+name+"!"));
+                out.println(responseToAll("Lance vencedor: ".concat(getWinner())));
+                isActive = false;
+            } else {
+                out.println(responseToUser(command,"Você não tem permissão para acabar com o leilão."));
+            }
+        } else if (command.contains("DARLANCE")) {
+            saveLance(command, out);
+        } else {
+            System.out.println("Commando desconhecido: ".concat(command));
+        }
+    }
+
+    private static String getWinner() {
+        return last != null ? last.toString() : "Sem lances registrados!";
+    }
+
+    private static String getUsername(final String command) {
+        return command.split("\\[")[1].split("]")[0];
+    }
+
+    private static void saveLance(final String command, final PrintWriter out) {
+        try {
+            Lance lance = new Lance(getUsername(command), new Double(command.split("DARLANCE\\(")[1].split("\\)")[0]));
+
+            if (last == null || last.getValor() < lance.getValor()) {
+                last = lance;
+                out.println(responseToUser(command, "O seu lance foi recebido com sucesso."));
+            } else {
+
+                out.println(responseToUser(command, "O lance que você tentou não foi aceito."));
+            }
+        } catch(Exception e) {
+            out.println(responseToUser(command, "Não foi possível salvar o lance do usuário."));
+        }
+    }
+
+    private static String responseToUser(final String command, final String message) {
+        return "[".concat(getUsername(command)).concat("]").concat(message);
+    }
+
+    private static String responseToAll(final String message) {
+        return "[".concat("ALL").concat("]").concat(message);
+    }
 }
